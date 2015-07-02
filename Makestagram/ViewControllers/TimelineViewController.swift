@@ -12,6 +12,8 @@ import Parse
 class TimelineViewController: UIViewController {
     
     var photoTakingHelper: PhotoTakingHelper?
+    var posts: [Post] = []
+    
     @IBOutlet weak var tableView: UITableView!
     
     override func viewDidLoad() {
@@ -31,6 +33,37 @@ class TimelineViewController: UIViewController {
             post.uploadPost()
         }
     }
+    
+    override func viewDidAppear(animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        // 1
+        let followingQuery = PFQuery(className: "Follow")
+        followingQuery.whereKey("fromUser", equalTo:PFUser.currentUser()!)
+        
+        // 2
+        let postsFromFollowedUsers = Post.query()
+        postsFromFollowedUsers!.whereKey("user", matchesKey: "toUser", inQuery: followingQuery)
+        
+        // 3
+        let postsFromThisUser = Post.query()
+        postsFromThisUser!.whereKey("user", equalTo: PFUser.currentUser()!)
+        
+        // 4
+        let query = PFQuery.orQueryWithSubqueries([postsFromFollowedUsers!, postsFromThisUser!])
+        // 5
+        query.includeKey("user")
+        // 6
+        query.orderByDescending("createdAt")
+        
+        // 7
+        query.findObjectsInBackgroundWithBlock {(result: [AnyObject]?, error: NSError?) -> Void in
+            // 8
+            self.posts = result as? [Post] ?? []
+            // 9
+            self.tableView.reloadData()
+        }
+    }
 
     
 }
@@ -48,6 +81,21 @@ extension TimelineViewController: UITabBarControllerDelegate {
             return true
         }
     }
+}
+
+extension TimelineViewController: UITableViewDataSource {
     
+    func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return posts.count
+    }
+    
+    func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
+        
+        let cell = tableView.dequeueReusableCellWithIdentifier("PostCell") as! UITableViewCell
+        
+        cell.textLabel!.text = "Post"
+        
+        return cell
+    }
 }
 
