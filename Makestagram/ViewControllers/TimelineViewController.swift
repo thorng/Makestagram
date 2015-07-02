@@ -37,30 +37,15 @@ class TimelineViewController: UIViewController {
     override func viewDidAppear(animated: Bool) {
         super.viewDidAppear(animated)
         
-        // 1
-        let followingQuery = PFQuery(className: "Follow")
-        followingQuery.whereKey("fromUser", equalTo:PFUser.currentUser()!)
-        
-        // 2
-        let postsFromFollowedUsers = Post.query()
-        postsFromFollowedUsers!.whereKey("user", matchesKey: "toUser", inQuery: followingQuery)
-        
-        // 3
-        let postsFromThisUser = Post.query()
-        postsFromThisUser!.whereKey("user", equalTo: PFUser.currentUser()!)
-        
-        // 4
-        let query = PFQuery.orQueryWithSubqueries([postsFromFollowedUsers!, postsFromThisUser!])
-        // 5
-        query.includeKey("user")
-        // 6
-        query.orderByDescending("createdAt")
-        
-        // 7
-        query.findObjectsInBackgroundWithBlock {(result: [AnyObject]?, error: NSError?) -> Void in
-            // 8
+        ParseHelper.timelineRequestforCurrentUser {
+            (result: [AnyObject]?, error: NSError?) -> Void in
             self.posts = result as? [Post] ?? []
-            // 9
+            
+            for post in self.posts {
+                let data = post.imageFile?.getData()
+                post.image = UIImage(data: data!, scale:1.0)
+            }
+            
             self.tableView.reloadData()
         }
     }
@@ -91,9 +76,9 @@ extension TimelineViewController: UITableViewDataSource {
     
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         
-        let cell = tableView.dequeueReusableCellWithIdentifier("PostCell") as! UITableViewCell
+        let cell = tableView.dequeueReusableCellWithIdentifier("PostCell") as! PostTableViewCell
         
-        cell.textLabel!.text = "Post"
+        cell.postImageView.image = posts[indexPath.row].image
         
         return cell
     }
